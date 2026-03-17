@@ -1,8 +1,7 @@
 from brian2 import *
 
-
 class LIF:
-    def __init__(self,tau,Vt,Vr,El,R,I):
+    def __init__(self,tau,Vt,Vr,El,R,I, sigma):
         # Load parameters
         self.tau = tau        # membrane time constant
         self.Vt = Vt       # spike threshold
@@ -10,21 +9,28 @@ class LIF:
         self.El = El
         self.R = R
         self.I = I
+        self.sigma = sigma
 
 
 
-    def determinisitc(self):
+    def stochastic(self):
         eqs = '''
-        dV/dt = (El - V + R*I)/tau : volt
+        dV/dt = (El - V + R*I )/tau + sigma*sqrt(2/tau)*xi: volt
+        El : volt
+        R : ohm
+        I : amp
+        tau : second
+        sigma : volt
         '''
-        G = NeuronGroup(1, eqs, threshold='V > Vt', reset='V = Vr', method='exact')
 
-        G.V = self.El
+        Vt, Vr = self.Vt, self.Vr 
+        G = NeuronGroup(1, eqs, threshold='V > Vt', reset='V = Vr', method='euler')
+
+        G.V = self.Vr
         G.El = self.El
         G.R = self.R
         G.I = self.I
         G.tau = self.tau
-        
         M = StateMonitor(G, 'V', record=True)
         spikemon = SpikeMonitor(G)
         run(100*ms)
@@ -42,6 +48,9 @@ if __name__ == "__main__":
         El = -65*mV        # resting potential
         R = 100*Mohm       # membrane resistance
         I = 0.3*nA         # input current
+        sigma = 2*mV
 
-        model = LIF(tau,Vt,Vr,El,R,I)
+        model = LIF(tau,Vt,Vr,El,R,I,sigma)
+
+        spike_times = model.stochastic()
 
